@@ -1,0 +1,70 @@
+Economic and Population Health Effects of Severe Storms 
+=============
+## (United States, 1950-1992)
+
+
+The raw data and documentation can be found and downloaded by running the following code:
+```{r download}
+download.file("https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2", "StormData.csv.bz2")
+download.file("https://d396qusza40orc.cloudfront.net/repdata%2Fpeer2_doc%2Fpd01016005curr.pdf", "StormDocumentation.pdf")
+```
+Then the data can be loaded in R as follows.  NOTE: you will need the R.utils package, which can be installed through CRAN.
+```{r load}
+library(R.utils)
+bunzip2("StormData.csv.bz2")
+stormData <- read.csv("StormData.csv")
+```
+
+The BGN_DATE column is a factor variable.  We will convert it to an object of class "Date" and put them in ascending order.
+```{r date}
+stormData$BGN_DATE <- as.character(stormData$BGN_DATE)
+stormData$BGN_DATE <- as.Date(stormData$BGN_DATE, "%m/%d/%Y")
+stormData <- stormData[order(stormData$BGN_DATE),]
+```
+
+After doing this, we can create the following histogram which shows the numbers of severe weather events contained in the data for each year.
+```{r yearhist}
+hist(stormData$BGN_DATE[1:300000], breaks = 40, freq= TRUE, main = "Severe Weather Events Reported Per Year", xlab = "Year", ylab="Number of Events Reported", ylim=c(0,6000))
+```
+
+From this we can see that the number of events reported in this data set rises sharply beginning in the mid 1970's.  For this reason, we will subset the data to include only those reports from 1975 and later.  This will give us a more accurate picture because it will filter out data from the earlier years when reporting was much more scattered and therefore cannot be counted on to be fully representitive.
+```{r se}
+sf <- grep("1975", stormData$BGN_DATE)
+sf[1]
+dim(stormData)
+sd <- stormData[54960:902297,]
+```
+```{r sdheadtail}
+head(sd[,1:5])
+tail(sd[,1:5])
+```
+
+By looking at the column names of our `sd`, and consulting the documentation provided, we can conclude that the columns related to property damage are 25 through 28 and those related to population health are 23 and 24.
+```{r names}
+names(sd)
+```
+
+We will then create two data sets, subsetting out those two groups.  We also subset out column 8 `EVTYPE` because our end goal is to determine the effect of different types of severe weather events.
+
+```{r sdpsdh}
+sdp <- sd[, c(2, 8, 25:28)]
+sdh <- sd[, c(2, 8, 23, 24)]
+```
+
+The `sdh` data set is now fairly straight-forward.  
+
+However, the `sdp` set is a bit confusing.  We have to do some cleaning before we can calculate the Crop Damage and Property Damage properly.  We learn from the page 12 of the documentation that the `DMG` variables represent US Dollar amounts rounded to three significant digits and that the `EXP` variables should contain either "K", "M", or "B" to signify the order of magnitude of the number being "thousand", "million", or "billion" respectively.  However, by doing a summary of those variables, we note that there are a number of other values as well.
+
+``` {r summaryexp}
+summary(sdp$CROPDMGEXP)
+summary(sdp$PROPDMGEXP)
+```
+
+None of these values are mentioned in the documentation.  However, we notice that none of the other values are present in even 0.01% of the rows.  This fact, coupled with their lack of explanation in the documentation, leads us to decide that they are misleading and statistically insignificant, so we will purge them from the data set.  The following code does this, after first transforming all letter characters to capitals for ease of processing.
+```{r purge}
+sdp$CROPDMGEXP <- toupper(as.character(sdp$CROPDMGEXP))
+sdp$PROPDMGEXP <- toupper(as.character(sdp$PROPDMGEXP))
+sdp <- sdp[-grep("[^K|M|B]", sdp$CROPDMGEXP),]
+sdp <- sdp[-grep("[^K|M|B]", sdp$PROPDMGEXP),]
+```
+
