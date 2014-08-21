@@ -1,6 +1,6 @@
 Economic and Population Health Effects of Severe Storms 
 =============
-## (United States, 1950-1992)
+## (United States, 1950-2011)
 
 
 The raw data and documentation can be found and downloaded by running the following code:
@@ -69,23 +69,24 @@ sdp <- sdp[-grep("[^K|M|B]", sdp$PROPDMGEXP),]
 ```
 
 Now that the unsavory factors have eliminated, and all of the remaining characters in the `EXP` columns have been converted to upper case, we can calculate the actual damage amounts in US Dollars.
-(This runs two for-loops on a rather large data set, so it will take a minute or two)
+
 ```{r dollars}
-for(i in 1:length(sdp$PROPDMGEXP)) {
-    if(sdp$PROPDMGEXP[i]=="K"){
-        sdp$PROPDMG[i] <- sdp$PROPDMG[i]*1000
-    } else if(sdp$PROPDMGEXP[i]=="M"){
-        sdp$PROPDMG[i] <- sdp$PROPDMG[i]*1000000
-    } else if(sdp$PROPDMGEXP[i]=="B"){
-        sdp$PROPDMG[i] <- sdp$PROPDMG[i]*1000000000
-    }    
-}
-for(i in 1:length(sdp$CROPDMGEXP)) {
-    if(sdp$CROPDMGEXP[i]=="K"){
-        sdp$CROPDMG[i] <- sdp$CROPDMG[i]*1000
-    } else if(sdp$CROPDMGEXP[i]=="M"){
-        sdp$CROPDMG[i] <- sdp$CROPDMG[i]*1000000
-    } else if(sdp$CROPDMGEXP[i]=="B"){
-        sdp$CROPDMG[i] <- sdp$CROPDMG[i]*1000000000
-    }    
-}
+sdp$propmult <- 1
+sdp$propmult[sdp$PROPDMGEXP == "K"] <- 1000
+sdp$propmult[sdp$PROPDMGEXP == "M"] <- 1000000
+sdp$propmult[sdp$PROPDMGEXP == "B"] <- 1000000000
+sdp$PROPDMG <- sdp$PROPDMG*sdp$propmult
+```
+
+---
+
+pdh, combine and multiply injuries
+
+---
+
+Now that we have our shit together...
+
+```{r evtypelower}
+levels(sdh$EVTYPE) <- tolower(levels(sdh$EVTYPE))
+levels(sdp$EVTYPE) <- tolower(levels(sdp$EVTYPE))
+```

@@ -8,10 +8,20 @@ stormData <- stormData[order(stormData$BGN_DATE),]
 sd <- stormData[54960:902297,]
 sdp <- sd[, c(2, 8, 25:28)]
 sdh <- sd[, c(2, 8, 23, 24)]
+#EXP
 sdp$CROPDMGEXP <- toupper(as.character(sdp$CROPDMGEXP))
 sdp$PROPDMGEXP <- toupper(as.character(sdp$PROPDMGEXP))
 sdp <- sdp[-grep("[^K|M|B]", sdp$CROPDMGEXP),]
 sdp <- sdp[-grep("[^K|M|B]", sdp$PROPDMGEXP),]
+sdp$propmult <- 1
+sdp$propmult[sdp$PROPDMGEXP == "K"] <- 1000
+sdp$propmult[sdp$PROPDMGEXP == "M"] <- 1000000
+sdp$propmult[sdp$PROPDMGEXP == "B"] <- 1000000000
+sdp$PROPDMG <- sdp$PROPDMG*sdp$propmult
+#EVTYPE
+levels(sdh$EVTYPE) <- tolower(levels(sdh$EVTYPE))
+levels(sdp$EVTYPE) <- tolower(levels(sdp$EVTYPE))
+
 
 
 download.file("https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2", "StormData.csv.bz2")
@@ -122,3 +132,79 @@ for(i in 1:length(sdp$CROPDMGEXP)) {
         sdp$CROPDMG[i] <- sdp$CROPDMG[i]*1000000000
     }    
 }
+
+## trying to split it up
+for(i in 1:10000) {
+    if(sdp$CROPDMGEXP[i]=="K"){
+        sdp$CROPDMG[i] <- sdp$CROPDMG[i]*1000
+    } else if(sdp$CROPDMGEXP[i]=="M"){
+        sdp$CROPDMG[i] <- sdp$CROPDMG[i]*1000000
+    } else if(sdp$CROPDMGEXP[i]=="B"){
+        sdp$CROPDMG[i] <- sdp$CROPDMG[i]*1000000000
+    }    
+}
+
+for(i in 130000:150000) {
+    if(sdp$CROPDMGEXP[i]=="K"){
+        sdp$CROPDMG[i] <- sdp$CROPDMG[i]*1000
+    } else if(sdp$CROPDMGEXP[i]=="M"){
+        sdp$CROPDMG[i] <- sdp$CROPDMG[i]*1000000
+    } else if(sdp$CROPDMGEXP[i]=="B"){
+        sdp$CROPDMG[i] <- sdp$CROPDMG[i]*1000000000
+    }    
+}
+
+### 25,000 TAKES ABOUT 20 SECONDS
+### THEN 50,000 ONLY TOOK 20 SECONDS
+### but then 100,000 took 5 minutes or so (but I was doing other stuff)
+
+## Hood fix (OH FUCK YEA) sort of makes -grep unneccessary, but then you still don't know what the DMG is for those, so it's probably better to purge them anyway.
+sdp$propmult <- 1
+sdp$propmult[sdp$PROPDMGEXP == "K"] <- 1000
+sdp$propmult[sdp$PROPDMGEXP == "M"] <- 1000000
+sdp$propmult[sdp$PROPDMGEXP == "B"] <- 1000000000
+sdp$PROPDMG <- sdp$PROPDMG*sdp$propmult
+
+## need to run on real thing
+sdp25 <- sdp[20005:20030,]
+sdp25$PROPDMG <- sdp25$PROPDMG*sdp25$propmult
+
+
+## EVTYPE fun
+for(i in 1:length(sdp$EVTYPE)) {
+    if(sdp$PROPDMGEXP[i]=="K"){
+        sdp$PROPDMG[i] <- sdp$PROPDMG[i]*1000
+    } else if(sdp$PROPDMGEXP[i]=="M"){
+        sdp$PROPDMG[i] <- sdp$PROPDMG[i]*1000000
+    } else if(sdp$PROPDMGEXP[i]=="B"){
+        sdp$PROPDMG[i] <- sdp$PROPDMG[i]*1000000000
+    }    
+}
+
+levels(sdh$EVTYPE) <- tolower(levels(sdh$EVTYPE))
+levels(sdp$EVTYPE) <- tolower(levels(sdp$EVTYPE))
+
+
+grepl("lightning", sdp$EVTYPE)
+grepl("thunder|rain", sdp$EVYTPE)
+grepl("snow|blizzard|chill|wint|cold|sleet|ice|freez", sdp$EVTYPE)
+grepl("hail", sdp$EVTYPE)
+grepl("seas|surf|tide|swell", sdp$EVTYPE)
+grepl("hurricane", sdp$EVTYPE)
+grepl("tornado|gustnado", sdp$EVTYPE)
+grepl("fire|smoke", sdp$EVTYPE)
+grepl("wind", sdp$EVTYPE)
+grepl("volcan", sdp$EVTYPE)
+grepl("flood|stream", sdp$EVTYPE)
+grepl("heat|temp|hot", sdp$EVTYPE)
+grepl("dry|drought", sdp$EVTYPE)
+
+##didn't work
+sdp25[grep("snow|blizzard|chill|wint|cold|sleet|ice|freez", sdp25$EVTYPE),]
+
+## YES!!!
+sdp25$event <- "other"
+sdp25$event[grep("wind", sdp25$EVTYPE)] <- "wind"
+sdp25$event[grep("hail", sdp25$EVTYPE)] <- "hail"
+
+
