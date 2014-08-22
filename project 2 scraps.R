@@ -13,17 +13,16 @@ sd$event[grep("lightning", sd$EVTYPE)] <- "lightning"
 sd$event[grep("thunder|rain", sd$EVTYPE)] <- "heavy rain"
 sd$event[grep("snow|blizzard|chill|wint|cold|sleet|ice|freez", sd$EVTYPE)] <- "winter storm"
 sd$event[grep("hail", sd$EVTYPE)] <- "hail"
-sd$event[grep("seas|surf|tide|swell", sd$EVTYPE)] <- "rough seas"
+sd$event[grep("seas|surf|tide|swell", sd$EVTYPE)] <- "coastal event"
 sd$event[grep("tornado|gustnado|funnel|spout", sd$EVTYPE)] <- "tornado"
 sd$event[grep("fire|smoke", sd$EVTYPE)] <- "fire"
 sd$event[grep("wind", sd$EVTYPE)] <- "heavy wind"
-sd$event[grep("hurricane", sd$EVTYPE)] <- "hurricane"
 sd$event[grep("volcan", sd$EVTYPE)] <- "volcano"
 sd$event[grep("flood|stream", sd$EVTYPE)] <- "flood"
 sd$event[grep("heat|temp|hot", sd$EVTYPE)] <- "heat wave"
 sd$event[grep("dry|drought", sd$EVTYPE)] <- "drought"
 sd$event[grep("microburst", sd$EVTYPE)] <- "microburst"
-sd$event[grep("hurricane", sd$EVTYPE)] <- "hurricane"
+sd$event[grep("hurricane|cyclone|surge", sd$EVTYPE)] <- "hurricane"
 sd$event <- as.factor(sd$event)
 #split
 sdp <- sd[, c(2, 25:28, 38)]
@@ -45,9 +44,13 @@ sdp$cropmult[sdp$CROPDMGEXP == "B"] <- 1000000000
 sdp$CROPDMG <- sdp$CROPDMG*sdp$cropmult
 #totaldmg
 sdp$totaldmg <- sdp$CROPDMG+sdp$PROPDMG
+#napafix
+sdp$totaldmg[sdp$totaldmg==115032500000] <- 115032500
+#aggregate
 sdpa <- sdp[,c("event", "totaldmg")]
 sdpa <- aggregate(sdpa$totaldmg, list(sdpa$event), sum)
 colnames(sdpa) <- c("event", "totaldmg")
+
 
 
 download.file("https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2", "StormData.csv.bz2")
@@ -264,9 +267,6 @@ sdp$totaldmg <- sdp$CROPDMG+sdp$PROPDMG
 sdpa <- sdp[,c("event", "totaldmg")]
 sdpa <- aggregate(sdpa$totaldmg, list(sdpa$event), sum)
 
-###works but needs some tweaking
-plot(sdpa$event, sdpa$totaldmg/1000000000, las=3)
-
 ###the crazy outlier
 View(sdp[sdp$totaldmg==max(sdp$totaldmg),])
 
@@ -276,7 +276,6 @@ top10 <- sdpo[1:10,]
 top10
 plot(top10$BGN_DATE, top10$totaldmg)
 
-Katrina <- sd[sd$BGN_DATE == "2005-08-29",]
 
 Napa <- sd[sd$BGN_DATE == "2006-01-01",]
 Napa <- Napa[23,]
@@ -285,3 +284,16 @@ Napa[,c(25:28, 36)]
 ##napafix
 sdp$totaldmg[sdp$totaldmg==115032500000] <- 115032500
 
+Katrina <- rbind(sd[sd$BGN_DATE == "2005-08-29",],sd[sd$BGN_DATE == "2005-08-28",])
+
+surge <- sd[grep("surge", sd$EVTYPE),]
+
+###works but needs some tweaking
+plot(sdpa$event, sdpa$totaldmg/1000000000, las=3)
+
+par(mar=c(7,3,3,1))
+plot(sdpa$event, sdpa$totaldmg/1000000000, las=3)
+
+## pretty good, need to add subtitle "By Type of Event, 1975-2011"
+par(mar=c(7,4,3,4))
+plot(sdpa$event, sdpa$totaldmg/1000000000, las=3, main="Total Damage from Severe Weather Events", ylab="Damage (in Billions of $)")

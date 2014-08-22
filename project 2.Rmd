@@ -47,17 +47,16 @@ sd$event[grep("lightning", sd$EVTYPE)] <- "lightning"
 sd$event[grep("thunder|rain", sd$EVTYPE)] <- "heavy rain"
 sd$event[grep("snow|blizzard|chill|wint|cold|sleet|ice|freez", sd$EVTYPE)] <- "winter storm"
 sd$event[grep("hail", sd$EVTYPE)] <- "hail"
-sd$event[grep("seas|surf|tide|swell", sd$EVTYPE)] <- "rough seas"
+sd$event[grep("seas|surf|tide|swell", sd$EVTYPE)] <- "coastal event"
 sd$event[grep("tornado|gustnado|funnel|spout", sd$EVTYPE)] <- "tornado"
 sd$event[grep("fire|smoke", sd$EVTYPE)] <- "fire"
 sd$event[grep("wind", sd$EVTYPE)] <- "heavy wind"
-sd$event[grep("hurricane", sd$EVTYPE)] <- "hurricane"
 sd$event[grep("volcan", sd$EVTYPE)] <- "volcano"
 sd$event[grep("flood|stream", sd$EVTYPE)] <- "flood"
 sd$event[grep("heat|temp|hot", sd$EVTYPE)] <- "heat wave"
 sd$event[grep("dry|drought", sd$EVTYPE)] <- "drought"
 sd$event[grep("microburst", sd$EVTYPE)] <- "microburst"
-sd$event[grep("hurricane", sd$EVTYPE)] <- "hurricane"
+sd$event[grep("hurricane|cyclone|surge", sd$EVTYPE)] <- "hurricane"
 sd$event <- as.factor(sd$event)
 ```
 
@@ -133,8 +132,6 @@ And here is the event: a flood in Napa, CA.  From the remarks, we can see that i
 sdp$totaldmg[sdp$totaldmg==115032500000] <- 115032500
 ```
 
-
-
 Now that everything is all cleaned up, we create a new object `sdpa` which aggregates the total damage for each type of event that we have defined in our `event` variable.
 
 ```{r spda}
@@ -143,6 +140,11 @@ sdpa <- aggregate(sdpa$totaldmg, list(sdpa$event), sum)
 colnames(sdpa) <- c("event", "totaldmg")
 ```
 
+sketch of sdp plot
+```{r sdpplot}
+par(mar=c(7,4,3,4))
+plot(sdpa$event, sdpa$totaldmg/1000000000, las=3, main="Total Damage from Severe Weather Events", ylab="Damage (in Billions of $)")
+```
 
 ---
 
