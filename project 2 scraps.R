@@ -6,8 +6,28 @@ stormData$BGN_DATE <- as.character(stormData$BGN_DATE)
 stormData$BGN_DATE <- as.Date(stormData$BGN_DATE, "%m/%d/%Y")
 stormData <- stormData[order(stormData$BGN_DATE),]
 sd <- stormData[54960:902297,]
-sdp <- sd[, c(2, 8, 25:28)]
-sdh <- sd[, c(2, 8, 23, 24)]
+#EVTYPE
+levels(sd$EVTYPE) <- tolower(levels(sd$EVTYPE))
+sd$event <- "other"
+sd$event[grep("lightning", sd$EVTYPE)] <- "lightning"
+sd$event[grep("thunder|rain", sd$EVTYPE)] <- "heavy rain"
+sd$event[grep("snow|blizzard|chill|wint|cold|sleet|ice|freez", sd$EVTYPE)] <- "winter storm"
+sd$event[grep("hail", sd$EVTYPE)] <- "hail"
+sd$event[grep("seas|surf|tide|swell", sd$EVTYPE)] <- "rough seas"
+sd$event[grep("tornado|gustnado|funnel|spout", sd$EVTYPE)] <- "tornado"
+sd$event[grep("fire|smoke", sd$EVTYPE)] <- "fire"
+sd$event[grep("wind", sd$EVTYPE)] <- "heavy wind"
+sd$event[grep("hurricane", sd$EVTYPE)] <- "hurricane"
+sd$event[grep("volcan", sd$EVTYPE)] <- "volcano"
+sd$event[grep("flood|stream", sd$EVTYPE)] <- "flood"
+sd$event[grep("heat|temp|hot", sd$EVTYPE)] <- "heat wave"
+sd$event[grep("dry|drought", sd$EVTYPE)] <- "drought"
+sd$event[grep("microburst", sd$EVTYPE)] <- "microburst"
+sd$event[grep("hurricane", sd$EVTYPE)] <- "hurricane"
+sd$event <- as.factor(sd$event)
+#split
+sdp <- sd[, c(2, 25:28, 38)]
+sdh <- sd[, c(2, 23, 24, 38)]
 #EXP
 sdp$CROPDMGEXP <- toupper(as.character(sdp$CROPDMGEXP))
 sdp$PROPDMGEXP <- toupper(as.character(sdp$PROPDMGEXP))
@@ -18,10 +38,16 @@ sdp$propmult[sdp$PROPDMGEXP == "K"] <- 1000
 sdp$propmult[sdp$PROPDMGEXP == "M"] <- 1000000
 sdp$propmult[sdp$PROPDMGEXP == "B"] <- 1000000000
 sdp$PROPDMG <- sdp$PROPDMG*sdp$propmult
-#EVTYPE
-levels(sdh$EVTYPE) <- tolower(levels(sdh$EVTYPE))
-levels(sdp$EVTYPE) <- tolower(levels(sdp$EVTYPE))
-
+sdp$cropmult <- 1
+sdp$cropmult[sdp$CROPDMGEXP == "K"] <- 1000
+sdp$cropmult[sdp$CROPDMGEXP == "M"] <- 1000000
+sdp$cropmult[sdp$CROPDMGEXP == "B"] <- 1000000000
+sdp$CROPDMG <- sdp$CROPDMG*sdp$cropmult
+#totaldmg
+sdp$totaldmg <- sdp$CROPDMG+sdp$PROPDMG
+sdpa <- sdp[,c("event", "totaldmg")]
+sdpa <- aggregate(sdpa$totaldmg, list(sdpa$event), sum)
+colnames(sdpa) <- c("event", "totaldmg")
 
 
 download.file("https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2", "StormData.csv.bz2")
@@ -203,8 +229,59 @@ grepl("dry|drought", sdp$EVTYPE)
 sdp25[grep("snow|blizzard|chill|wint|cold|sleet|ice|freez", sdp25$EVTYPE),]
 
 ## YES!!!
+sdp25 <- sdp[20005:20030,]
 sdp25$event <- "other"
 sdp25$event[grep("wind", sdp25$EVTYPE)] <- "wind"
 sdp25$event[grep("hail", sdp25$EVTYPE)] <- "hail"
 
+## now testing
+sd100$event <- "other"
+sd100$event[grep("snow|blizzard|chill|wint|cold|sleet|ice|freez", sd100$EVTYPE)] <- "winter storm"
+sd100$event[grep("wind", sd100$EVTYPE)] <- "wind"
+sd100$event[grep("hail", sd100$EVTYPE)] <- "hail"
+[,c(3,8,38)]
+
+## now for real
+sd$event <- "other"
+sd$event[grep("lightning", sd$EVTYPE)] <- "lightning"
+sd$event[grep("thunder|rain", sd$EVTYPE)] <- "heavy rain"
+sd$event[grep("snow|blizzard|chill|wint|cold|sleet|ice|freez", sd$EVTYPE)] <- "winter storm"
+sd$event[grep("hail", sd$EVTYPE)] <- "hail"
+sd$event[grep("seas|surf|tide|swell", sd$EVTYPE)] <- "rough seas"
+sd$event[grep("tornado|gustnado|funnel|spout", sd$EVTYPE)] <- "tornado"
+sd$event[grep("fire|smoke", sd$EVTYPE)] <- "fire"
+sd$event[grep("wind", sd$EVTYPE)] <- "heavy wind"
+sd$event[grep("hurricane", sd$EVTYPE)] <- "hurricane"
+sd$event[grep("volcan", sd$EVTYPE)] <- "volcano"
+sd$event[grep("flood|stream", sd$EVTYPE)] <- "flood"
+sd$event[grep("heat|temp|hot", sd$EVTYPE)] <- "heat wave"
+sd$event[grep("dry|drought", sd$EVTYPE)] <- "drought"
+sd$event[grep("microburst", sd$EVTYPE)] <- "microburst"
+sd$event[grep("hurricane", sd$EVTYPE)] <- "hurricane"
+
+###total damage
+sdp$totaldmg <- sdp$CROPDMG+sdp$PROPDMG
+sdpa <- sdp[,c("event", "totaldmg")]
+sdpa <- aggregate(sdpa$totaldmg, list(sdpa$event), sum)
+
+###works but needs some tweaking
+plot(sdpa$event, sdpa$totaldmg/1000000000, las=3)
+
+###the crazy outlier
+View(sdp[sdp$totaldmg==max(sdp$totaldmg),])
+
+sdpo <- sdp
+sdpo <- sdpo[order(sdpo$totaldmg, decreasing=TRUE),]
+top10 <- sdpo[1:10,]
+top10
+plot(top10$BGN_DATE, top10$totaldmg)
+
+Katrina <- sd[sd$BGN_DATE == "2005-08-29",]
+
+Napa <- sd[sd$BGN_DATE == "2006-01-01",]
+Napa <- Napa[23,]
+Napa[,c(25:28, 36)]
+
+##napafix
+sdp$totaldmg[sdp$totaldmg==115032500000] <- 115032500
 

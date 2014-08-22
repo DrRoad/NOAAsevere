@@ -39,16 +39,38 @@ head(sd[,1:5])
 tail(sd[,1:5])
 ```
 
+For this analysis, we will be examining what types of severe weather events caused the most damage.  Unfortunately, the `EVTYPE` variable is rather messy.  We will clean it up by adding another variable called `event` and putting broader, more useful, labels for each event into that variable.
+```{r event}
+levels(sd$EVTYPE) <- tolower(levels(sd$EVTYPE))
+sd$event <- "other"
+sd$event[grep("lightning", sd$EVTYPE)] <- "lightning"
+sd$event[grep("thunder|rain", sd$EVTYPE)] <- "heavy rain"
+sd$event[grep("snow|blizzard|chill|wint|cold|sleet|ice|freez", sd$EVTYPE)] <- "winter storm"
+sd$event[grep("hail", sd$EVTYPE)] <- "hail"
+sd$event[grep("seas|surf|tide|swell", sd$EVTYPE)] <- "rough seas"
+sd$event[grep("tornado|gustnado|funnel|spout", sd$EVTYPE)] <- "tornado"
+sd$event[grep("fire|smoke", sd$EVTYPE)] <- "fire"
+sd$event[grep("wind", sd$EVTYPE)] <- "heavy wind"
+sd$event[grep("hurricane", sd$EVTYPE)] <- "hurricane"
+sd$event[grep("volcan", sd$EVTYPE)] <- "volcano"
+sd$event[grep("flood|stream", sd$EVTYPE)] <- "flood"
+sd$event[grep("heat|temp|hot", sd$EVTYPE)] <- "heat wave"
+sd$event[grep("dry|drought", sd$EVTYPE)] <- "drought"
+sd$event[grep("microburst", sd$EVTYPE)] <- "microburst"
+sd$event[grep("hurricane", sd$EVTYPE)] <- "hurricane"
+sd$event <- as.factor(sd$event)
+```
+
 By looking at the column names of our `sd`, and consulting the documentation provided, we can conclude that the columns related to property damage are 25 through 28 and those related to population health are 23 and 24.
 ```{r names}
 names(sd)
 ```
 
-We will then create two data sets, subsetting out those two groups.  We also subset out column 8 `EVTYPE` because our end goal is to determine the effect of different types of severe weather events.
+We will then create two data sets, subsetting out those two groups, as well as our recently created `event` variable.
 
 ```{r sdpsdh}
-sdp <- sd[, c(2, 8, 25:28)]
-sdh <- sd[, c(2, 8, 23, 24)]
+sdp <- sd[, c(2, 25:28, 38)]
+sdh <- sd[, c(2, 23, 24, 38)]
 ```
 
 The `sdh` data set is now fairly straight-forward.  
@@ -76,7 +98,51 @@ sdp$propmult[sdp$PROPDMGEXP == "K"] <- 1000
 sdp$propmult[sdp$PROPDMGEXP == "M"] <- 1000000
 sdp$propmult[sdp$PROPDMGEXP == "B"] <- 1000000000
 sdp$PROPDMG <- sdp$PROPDMG*sdp$propmult
+sdp$cropmult <- 1
+sdp$cropmult[sdp$CROPDMGEXP == "K"] <- 1000
+sdp$cropmult[sdp$CROPDMGEXP == "M"] <- 1000000
+sdp$cropmult[sdp$CROPDMGEXP == "B"] <- 1000000000
+sdp$CROPDMG <- sdp$CROPDMG*sdp$cropmult
 ```
+
+Finally we will combine `PROPDMG` and `CROPDMG` into a variable called `totaldmg` which we will use to compare different event types' economic damge.  
+
+```{r totaldmg}
+sdp$totaldmg <- sdp$CROPDMG+sdp$PROPDMG
+```
+
+Before we go any further, we will check the `totaldmg` variable to make sure we don't have any unexplained outliers.  We do this looking at the Top 10 `totaldmg` events make sure they all seem realistic.
+```{r top10}
+sdpo <- sdp
+sdpo <- sdpo[order(sdpo$totaldmg, decreasing=TRUE),]
+top10 <- sdpo[1:10,]
+top10
+```
+
+Unfortunately, things seem strange.  There is one event - on January 1, 2006 - that registers over $115 Billion in damage.  This seems unlikely, especially when we rack our memories and can't remember any catastrophic weather events happening on New Year's Day less than 10 years ago. 
+
+We go back to the `sd` data set which still has a `REMARKS` variable, to see if we can learn anything.
+```{r napa}
+Napa <- sd[sd$BGN_DATE == "2006-01-01",]
+Napa <- Napa[23,]
+Napa[,c(25:28, 36)]
+```
+
+And here is the event: a flood in Napa, CA.  From the remarks, we can see that it did "at least $70 million" in property damage.  This is significant, but nowhere near the $115 Billion which is reflected in the `PROPDMG` AND `PROPDMGEXP` variables.  We have to assume that this was a typo, the most likely situation being that someone typed a "B" instead of an "M" in the `CROPDMGEXP` column.  This is fixed with the code below and we move on.
+```{r napafix}
+sdp$totaldmg[sdp$totaldmg==115032500000] <- 115032500
+```
+
+
+
+Now that everything is all cleaned up, we create a new object `sdpa` which aggregates the total damage for each type of event that we have defined in our `event` variable.
+
+```{r spda}
+sdpa <- sdp[,c("event", "totaldmg")]
+sdpa <- aggregate(sdpa$totaldmg, list(sdpa$event), sum)
+colnames(sdpa) <- c("event", "totaldmg")
+```
+
 
 ---
 
@@ -85,8 +151,3 @@ pdh, combine and multiply injuries
 ---
 
 Now that we have our shit together...
-
-```{r evtypelower}
-levels(sdh$EVTYPE) <- tolower(levels(sdh$EVTYPE))
-levels(sdp$EVTYPE) <- tolower(levels(sdp$EVTYPE))
-```
