@@ -1,3 +1,6 @@
+---
+output: html_document
+---
 Economic and Population Health Effects of Severe Storms 
 =============
 ## (United States, 1975-2011)
@@ -7,8 +10,8 @@ This document examines NOAA data on Severe Weather Events and attempts to ascert
 ##Loading The Data
 The raw data and documentation can be found and downloaded by running the following code:
 ```{r download}
-download.file("https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2", "StormData.csv.bz2")
-download.file("https://d396qusza40orc.cloudfront.net/repdata%2Fpeer2_doc%2Fpd01016005curr.pdf", "StormDocumentation.pdf")
+download.file("http://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2", "StormData.csv.bz2")
+download.file("http://d396qusza40orc.cloudfront.net/repdata%2Fpeer2_doc%2Fpd01016005curr.pdf", "StormDocumentation.pdf")
 ```
 Then the data can be loaded in R as follows.  NOTE: you will need the R.utils package, which can be installed through CRAN.
 ```{r load, cache=TRUE}
@@ -183,7 +186,7 @@ It's clear that Hurricanes do the most economic damage, far ahead of anything el
 ```{r katrina}
 Katrina <- rbind(sd[sd$BGN_DATE == "2005-08-29",],sd[sd$BGN_DATE == "2005-08-28",])
 Katrina <- Katrina[grep("hurricane|surge", Katrina$EVTYPE),]
-Katrina[,c(2,7,8,25:28)]
+Katrina[,c(2,7,8,25,26)]
 ```
 
 Floods do the second most damage and tornadoes the third.  Winter storms come in a distant fourth.
@@ -223,6 +226,6 @@ This casts some doubt on this whole portion of the analysis, but there seems to 
 
 In conclusion, don't live anywhere with hurricanes, floods, or tornadoes.  Unless it's New Orleans, because New Orleans is the shit.
 
-Exhibit A: https://www.youtube.com/watch?v=cLPXcYo3uvc
+Exhibit A: http://www.youtube.com/watch?v=cLPXcYo3uvc
 
 

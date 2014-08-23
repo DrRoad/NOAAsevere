@@ -288,7 +288,23 @@ sdp$totaldmg[sdp$totaldmg==115032500000] <- 115032500
 
 Katrina <- rbind(sd[sd$BGN_DATE == "2005-08-29",],sd[sd$BGN_DATE == "2005-08-28",])
 Katrina <- Katrina[grep("hurricane|surge", Katrina$EVTYPE),]
-Katrina[,c(2,7,8,25:28)]
+Katrina[,c(2,7,8,25,26)]
+
+Katrina <- rbind(sd[sd$BGN_DATE == "2005-08-29",],sd[sd$BGN_DATE == "2005-08-28",])
+Katrina <- Katrina[grep("hurricane|surge", Katrina$EVTYPE),]
+Katrina$propmult <- 1
+Katrina$propmult[Katrina$PROPDMGEXP == "K"] <- 1000
+Katrina$propmult[Katrina$PROPDMGEXP == "M"] <- 1000000
+Katrina$propmult[Katrina$PROPDMGEXP == "B"] <- 1000000000
+Katrina$PROPDMG <- Katrina$PROPDMG*Katrina$propmult
+Katrina$cropmult <- 1
+Katrina$cropmult[Katrina$CROPDMGEXP == "K"] <- 1000
+Katrina$cropmult[Katrina$CROPDMGEXP == "M"] <- 1000000
+Katrina$cropmult[Katrina$CROPDMGEXP == "B"] <- 1000000000
+Katrina$CROPDMG <- Katrina$CROPDMG*Katrina$cropmult
+#totaldmg
+Katrina$totaldmg <- Katrina$CROPDMG+Katrina$PROPDMG
+Katrina[,c(2,7,8,41)]
 
 Ten <- sd[sd$BGN_DATE == "2001-06-05",]
 Ten <- Ten[Ten$PROPDMGEXP == "B",]
