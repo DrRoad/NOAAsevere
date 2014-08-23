@@ -50,6 +50,7 @@ sdp$totaldmg[sdp$totaldmg==115032500000] <- 115032500
 sdpa <- sdp[,c("event", "totaldmg")]
 sdpa <- aggregate(sdpa$totaldmg, list(sdpa$event), sum)
 colnames(sdpa) <- c("event", "totaldmg")
+sdpa <- sdpa[order(sdpa$totaldmg, decreasing=TRUE),]
 
 
 
@@ -260,6 +261,7 @@ sd$event[grep("flood|stream", sd$EVTYPE)] <- "flood"
 sd$event[grep("heat|temp|hot", sd$EVTYPE)] <- "heat wave"
 sd$event[grep("dry|drought", sd$EVTYPE)] <- "drought"
 sd$event[grep("microburst", sd$EVTYPE)] <- "microburst"
+sd$event[grep("tropical", sd$EVTYPE)] <- "tropical storm"
 sd$event[grep("hurricane", sd$EVTYPE)] <- "hurricane"
 
 ###total damage
@@ -285,6 +287,12 @@ Napa[,c(25:28, 36)]
 sdp$totaldmg[sdp$totaldmg==115032500000] <- 115032500
 
 Katrina <- rbind(sd[sd$BGN_DATE == "2005-08-29",],sd[sd$BGN_DATE == "2005-08-28",])
+Katrina <- Katrina[grep("hurricane|surge", Katrina$EVTYPE),]
+Katrina[,c(2,7,8,25:28)]
+
+Ten <- sd[sd$BGN_DATE == "2001-06-05",]
+Ten <- Ten[Ten$PROPDMGEXP == "B",]
+Ten[,c(25:28, 36)]
 
 surge <- sd[grep("surge", sd$EVTYPE),]
 
@@ -297,3 +305,21 @@ plot(sdpa$event, sdpa$totaldmg/1000000000, las=3)
 ## pretty good, need to add subtitle "By Type of Event, 1975-2011"
 par(mar=c(7,4,3,4))
 plot(sdpa$event, sdpa$totaldmg/1000000000, las=3, main="Total Damage from Severe Weather Events", ylab="Damage (in Billions of $)")
+
+### sdh
+
+sdh$totaldmg <- sdh$INJURIES+sdh$FATALITIES*3
+
+sdho <- sdh
+sdho <- sdho[order(sdho$totaldmg, decreasing=TRUE),]
+top10h <- sdho[1:10,]
+top10h
+
+hurhealth <- sdh[grep("hurricane", sdh$event),]
+hurhealth <- hurhealth[order(sdh$totaldmg),]
+hurhealth <- hurhealth[order(hurhealth$totaldmg, decreasing=TRUE),]
+hurhealth[1:10,]
+
+par(mar=c(7,3,3,2))
+plot(sdha$event, sdha$totaldmg, las=3, main="Population Health Damage \nfrom Severe Weather", ylab="Fatalities and Injuries", yaxt='n')
+

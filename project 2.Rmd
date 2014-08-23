@@ -1,28 +1,33 @@
 Economic and Population Health Effects of Severe Storms 
 =============
-## (United States, 1950-2011)
+## (United States, 1975-2011)
 
+This document examines NOAA data on Severe Weather Events and attempts to ascertain what kinds of severe weather cause the most economic and population health damage.  The data is fairly messy, so a decent amount of pre-processing and cleaning must be done before we can gain much insight from the data.  This cleaning is detailed below, then the data is split into and an `sdh` data set containing the data relevant to population health, and an `sdp` data set containing the data relevant to economic damage.  Then, in the Results section, we examine total damage by event type for each data set.
 
+##Loading The Data
 The raw data and documentation can be found and downloaded by running the following code:
 ```{r download}
 download.file("https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2", "StormData.csv.bz2")
 download.file("https://d396qusza40orc.cloudfront.net/repdata%2Fpeer2_doc%2Fpd01016005curr.pdf", "StormDocumentation.pdf")
 ```
 Then the data can be loaded in R as follows.  NOTE: you will need the R.utils package, which can be installed through CRAN.
-```{r load}
+```{r load, cache=TRUE}
 library(R.utils)
 bunzip2("StormData.csv.bz2")
 stormData <- read.csv("StormData.csv")
 ```
 
-The BGN_DATE column is a factor variable.  We will convert it to an object of class "Date" and put them in ascending order.
+#Processing The Data
+
+###Date
+The BGN_DATE column is a factor variable.  We will convert it to an object of class "Date" and put the data in chronological order.
 ```{r date}
 stormData$BGN_DATE <- as.character(stormData$BGN_DATE)
 stormData$BGN_DATE <- as.Date(stormData$BGN_DATE, "%m/%d/%Y")
 stormData <- stormData[order(stormData$BGN_DATE),]
 ```
 
-After doing this, we can create the following histogram which shows the numbers of severe weather events contained in the data for each year.
+The following is a histogram which shows the numbers of severe weather events contained in the data for each year.
 ```{r yearhist}
 hist(stormData$BGN_DATE[1:300000], breaks = 40, freq= TRUE, main = "Severe Weather Events Reported Per Year", xlab = "Year", ylab="Number of Events Reported", ylim=c(0,6000))
 ```
@@ -39,6 +44,7 @@ head(sd[,1:5])
 tail(sd[,1:5])
 ```
 
+###Event Type
 For this analysis, we will be examining what types of severe weather events caused the most damage.  Unfortunately, the `EVTYPE` variable is rather messy.  We will clean it up by adding another variable called `event` and putting broader, more useful, labels for each event into that variable.
 ```{r event}
 levels(sd$EVTYPE) <- tolower(levels(sd$EVTYPE))
@@ -56,11 +62,14 @@ sd$event[grep("flood|stream", sd$EVTYPE)] <- "flood"
 sd$event[grep("heat|temp|hot", sd$EVTYPE)] <- "heat wave"
 sd$event[grep("dry|drought", sd$EVTYPE)] <- "drought"
 sd$event[grep("microburst", sd$EVTYPE)] <- "microburst"
+sd$event[grep("tropical", sd$EVTYPE)] <- "tropical storm"
 sd$event[grep("hurricane|cyclone|surge", sd$EVTYPE)] <- "hurricane"
 sd$event <- as.factor(sd$event)
 ```
 
-By looking at the column names of our `sd`, and consulting the documentation provided, we can conclude that the columns related to property damage are 25 through 28 and those related to population health are 23 and 24.
+
+###Subsetting The Data
+By looking at the column names of our `sd` data set, and consulting the documentation provided, we conclude that the columns related to property damage are 25 through 28 and those related to population health are 23 and 24.
 ```{r names}
 names(sd)
 ```
@@ -72,16 +81,15 @@ sdp <- sd[, c(2, 25:28, 38)]
 sdh <- sd[, c(2, 23, 24, 38)]
 ```
 
-The `sdh` data set is now fairly straight-forward.  
-
-However, the `sdp` set is a bit confusing.  We have to do some cleaning before we can calculate the Crop Damage and Property Damage properly.  We learn from the page 12 of the documentation that the `DMG` variables represent US Dollar amounts rounded to three significant digits and that the `EXP` variables should contain either "K", "M", or "B" to signify the order of magnitude of the number being "thousand", "million", or "billion" respectively.  However, by doing a summary of those variables, we note that there are a number of other values as well.
+###Calculating Total Economic Damage
+We have to do some cleaning before we can calculate the Crop Damage and Property Damage properly.  We learn from the page 12 of the documentation that the `DMG` variables represent US Dollar amounts rounded to three significant digits and that the `EXP` variables should contain either "K", "M", or "B" to signify the order of magnitude of the number being "thousand", "million", or "billion" respectively.  However, by doing a summary of those variables, we note that there are a number of other values as well.
 
 ``` {r summaryexp}
 summary(sdp$CROPDMGEXP)
 summary(sdp$PROPDMGEXP)
 ```
 
-None of these values are mentioned in the documentation.  However, we notice that none of the other values are present in even 0.01% of the rows.  This fact, coupled with their lack of explanation in the documentation, leads us to decide that they are misleading and statistically insignificant, so we will purge them from the data set.  The following code does this, after first transforming all letter characters to capitals for ease of processing.
+None of these values are mentioned in the documentation.  However, we notice that none of the other values are present in even 0.01% of the rows.  This fact, coupled with their lack of explanation in the documentation, leads us to decide that they are both misleading *and* statistically insignificant, so we will purge them from the data set.  The following code does this, after first transforming all letter characters to capitals for ease of processing.
 ```{r purge}
 sdp$CROPDMGEXP <- toupper(as.character(sdp$CROPDMGEXP))
 sdp$PROPDMGEXP <- toupper(as.character(sdp$PROPDMGEXP))
@@ -89,7 +97,7 @@ sdp <- sdp[-grep("[^K|M|B]", sdp$CROPDMGEXP),]
 sdp <- sdp[-grep("[^K|M|B]", sdp$PROPDMGEXP),]
 ```
 
-Now that the unsavory factors have eliminated, and all of the remaining characters in the `EXP` columns have been converted to upper case, we can calculate the actual damage amounts in US Dollars.
+Now that the unsavory factors have been eliminated, and all of the remaining characters in the `EXP` columns have been converted to upper case, we can calculate the actual damage amounts in US Dollars.
 
 ```{r dollars}
 sdp$propmult <- 1
@@ -110,12 +118,12 @@ Finally we will combine `PROPDMG` and `CROPDMG` into a variable called `totaldmg
 sdp$totaldmg <- sdp$CROPDMG+sdp$PROPDMG
 ```
 
-Before we go any further, we will check the `totaldmg` variable to make sure we don't have any unexplained outliers.  We do this looking at the Top 10 `totaldmg` events make sure they all seem realistic.
-```{r top10}
+Before we go any further, we will check the `totaldmg` variable to make sure we don't have any unexplained outliers.  We do this by looking at the Top 10 `totaldmg` events make sure they all seem realistic.
+```{r top10p}
 sdpo <- sdp
 sdpo <- sdpo[order(sdpo$totaldmg, decreasing=TRUE),]
-top10 <- sdpo[1:10,]
-top10
+top10p <- sdpo[1:10,]
+top10p
 ```
 
 Unfortunately, things seem strange.  There is one event - on January 1, 2006 - that registers over $115 Billion in damage.  This seems unlikely, especially when we rack our memories and can't remember any catastrophic weather events happening on New Year's Day less than 10 years ago. 
@@ -127,29 +135,94 @@ Napa <- Napa[23,]
 Napa[,c(25:28, 36)]
 ```
 
-And here is the event: a flood in Napa, CA.  From the remarks, we can see that it did "at least $70 million" in property damage.  This is significant, but nowhere near the $115 Billion which is reflected in the `PROPDMG` AND `PROPDMGEXP` variables.  We have to assume that this was a typo, the most likely situation being that someone typed a "B" instead of an "M" in the `CROPDMGEXP` column.  This is fixed with the code below and we move on.
+And here is the event: a flood in Napa, CA.  From the remarks, we can see that it did "at least $70 million" in property damage.  This is significant, but nowhere near the $115 Billion that's reflected in the `PROPDMG` AND `PROPDMGEXP` variables.  We have to assume that this was a typo, the most likely situation being that someone typed a "B" instead of an "M" in the `CROPDMGEXP` column.  This is fixed with the code below and we move on.
 ```{r napafix}
 sdp$totaldmg[sdp$totaldmg==115032500000] <- 115032500
 ```
 
-Now that everything is all cleaned up, we create a new object `sdpa` which aggregates the total damage for each type of event that we have defined in our `event` variable.
+###Calculating Total Health Damage
+To calculate the population health effects, we will be looking at the `FATALITIES` and `INJURIES` columns of our `sdh` data set.  In order to compare types of events, we will create a `totaldmg` variable.  It seems wrong to weigh fatalies and injuries as the same amount of "health damage", so we arbitrarily multiply the fatalities by 3 to give us a better picture of overall damage.  Everyone knows dying is three times worse than being injured.
+
+```{r sdhtotaldmg}
+sdh$totaldmg <- sdh$INJURIES+sdh$FATALITIES*3
+```
+
+Again, before we go any further, we will check the `totaldmg` variable to make sure we don't have any unexplained outliers.  
+```{r top10h}
+sdho <- sdh
+sdho <- sdho[order(sdho$totaldmg, decreasing=TRUE),]
+top10h <- sdho[1:10,]
+top10h
+```
+
+Luckily, this time everything seems normal.  
+
+
+#Results
+
+##Economic Damage
+
+Now that everything is cleaned up, we create a new object `sdpa` which aggregates the total damage for each type of event that we have defined in our `event` variable.
 
 ```{r spda}
 sdpa <- sdp[,c("event", "totaldmg")]
 sdpa <- aggregate(sdpa$totaldmg, list(sdpa$event), sum)
 colnames(sdpa) <- c("event", "totaldmg")
+sdpa <- sdpa[order(sdpa$totaldmg, decreasing=TRUE),]
+sdpa
 ```
 
-sketch of sdp plot
+The figure below shows the total damage done by each category of severe weather event.
+
 ```{r sdpplot}
 par(mar=c(7,4,3,4))
-plot(sdpa$event, sdpa$totaldmg/1000000000, las=3, main="Total Damage from Severe Weather Events", ylab="Damage (in Billions of $)")
+plot(sdpa$event, sdpa$totaldmg/1000000000, las=3, main="Economic Damage \nfrom Severe Weather Events", ylab="Damage (in Billions of $)")
 ```
 
----
+It's clear that Hurricanes do the most economic damage, far ahead of anything else.  Hurricane Katrina alone did more total damage than many of the categories in the previous plot.
+```{r katrina}
+Katrina <- rbind(sd[sd$BGN_DATE == "2005-08-29",],sd[sd$BGN_DATE == "2005-08-28",])
+Katrina <- Katrina[grep("hurricane|surge", Katrina$EVTYPE),]
+Katrina[,c(2,7,8,25:28)]
+```
 
-pdh, combine and multiply injuries
+Floods do the second most damage and tornadoes the third.  Winter storms come in a distant fourth.
 
----
+##Population Health Damage
 
-Now that we have our shit together...
+We create a new object `sdha` which aggregates the total health damage for each type of event that we have defined in our `event` variable.
+
+```{r spha}
+sdha <- sdh[,c("event", "totaldmg")]
+sdha <- aggregate(sdha$totaldmg, list(sdha$event), sum)
+colnames(sdha) <- c("event", "totaldmg")
+sdha <- sdha[order(sdha$totaldmg, decreasing=TRUE),]
+sdha
+```
+
+The figure below shows the total health damage done by each category of severe weather event.
+
+```{r sdhplot}
+par(mar=c(7,4,3,2))
+plot(sdha$event, sdha$totaldmg, las=3, main="Population Health Damage \nfrom Severe Weather", ylab="Fatalities and Injuries", yaxt='n')
+```
+
+By this measure, tornadoes cause by the far the most population health damage.  Heat waves are a distant second, followed by heavy winds and then floods.  
+
+Considering hurricanes did so much property damage, we are confused that they are so far down the list for health damage.  To look into this, we check the health data for the ten most destructive hurricanes in our data set.
+```{r hurhealth}
+hurhealth <- sdh[grep("hurricane", sdh$event),]
+hurhealth <- hurhealth[order(sdh$totaldmg),]
+hurhealth <- hurhealth[order(hurhealth$totaldmg, decreasing=TRUE),]
+hurhealth[1:10,]
+```
+
+Among other things, we notice that Hurricane Katrina (August 29th, 2005) registers only 15 fatalities and 104 injuries.  We know - from our own memory, from Wikipedia, and from the `REMARKS` column in our `Katrina` data set above - that this wildly underestimates the fatalities and injuries.  Wikipedia tells us that 1,833 fatalities were directly associated with Hurricane Katrina.  Our data set registers only 15.  
+
+This casts some doubt on this whole portion of the analysis, but there seems to be no easy way to fix these entries, short of scanning through the `REMARKS` column of our original `sd` set and double-checking it against `FATALITIES` and `INJURIES`.  Unfortunately, with 847,338 observations, that is totally unreasonable.  We therefore accept our current analysis but take it, as they say, with a grain of salt.  Tornadoes are bad.
+
+In conclusion, don't live anywhere with hurricanes, floods, or tornadoes.  Unless it's New Orleans, because New Orleans is the shit.
+
+Exhibit A: https://www.youtube.com/watch?v=cLPXcYo3uvc
+
+
